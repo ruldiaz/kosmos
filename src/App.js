@@ -8,17 +8,16 @@
 
     const addMoveable = async () => {
       const COLORS = ["red", "blue", "yellow", "green", "purple"];
-
+    
       try {
         const response = await fetch("https://jsonplaceholder.typicode.com/photos");
         const data = await response.json();
-
+    
         const randomPhoto = data[Math.floor(Math.random() * data.length)];
         const imageUrl = randomPhoto.url;
-
-        setMoveableComponents((prevComponents) => [
-          ...prevComponents,
-          {
+    
+        setMoveableComponents((prevComponents) => {
+          const newComponent = {
             id: Math.floor(Math.random() * Date.now()),
             top: 0,
             left: 0,
@@ -26,13 +25,15 @@
             height: 100,
             color: COLORS[Math.floor(Math.random() * COLORS.length)],
             imageUrl: imageUrl,
-          },
-        ]);
+          };
+          return [...prevComponents, newComponent];
+        });
       } catch (error) {
         console.error("Failed to fetch photo:", error);
       }
     };
-
+  
+  
     const updateMoveable = (id, newComponent) => {
       setMoveableComponents((prevComponents) =>
         prevComponents.map((moveable) => {
@@ -111,6 +112,7 @@
     children,
   }) => {
     const ref = useRef();
+    const moveableRef = useRef();
     const [nodoReferencia, setNodoReferencia] = useState({
       top,
       left,
@@ -121,6 +123,24 @@
       id,
     });
     console.log(nodoReferencia)
+
+    useEffect(() => {
+      if (isSelected) {
+        setSelected(id);
+    
+        // Obtiene el tamaño y la posición del div "parent"
+        const parentBounds = parentRef.current.getBoundingClientRect();
+    
+        // Configura los límites del arrastre en base al div "parent"
+        moveableRef.current.dragArea = {
+          left: 0,
+          top: 0,
+          right: parentBounds.width - width,
+          bottom: parentBounds.height - height,
+        };
+      }
+    }, [isSelected, id, setSelected, parentRef, width, height]);
+
     useEffect(() => {
       if (isSelected) {
         setSelected(id);
@@ -172,24 +192,11 @@
       let newLeft = left + e.drag.beforeTranslate[0];
       let newTop = top + e.drag.beforeTranslate[1];
     
-      const positionMaxTop = newTop + newHeight;
-      const positionMaxLeft = newLeft + newWidth;
+      const maxLeft = parentBounds.width - newWidth;
+      const maxTop = parentBounds.height - newHeight;
     
-      if (positionMaxTop > parentBounds.height) {
-        newHeight = parentBounds.height - newTop;
-      }
-      if (positionMaxLeft > parentBounds.width) {
-        newWidth = parentBounds.width - newLeft;
-      }
-    
-      if (newLeft < 0) {
-        newWidth += newLeft;
-        newLeft = 0;
-      }
-      if (newTop < 0) {
-        newHeight += newTop;
-        newTop = 0;
-      }
+      newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+      newTop = Math.max(0, Math.min(newTop, maxTop));
     
       updateMoveable(id, {
         top: newTop,
@@ -200,6 +207,33 @@
       });
     };
     
+    
+    const onDrag = (e) => {
+      const parentBounds = parentRef.current.getBoundingClientRect();
+    
+      const newLeft = left + e.delta[0];
+      const newTop = top + e.delta[1];
+    
+      if (newLeft < 0) {
+        e.delta[0] = -left;
+      } else if (newLeft + width > parentBounds.width) {
+        e.delta[0] = parentBounds.width - left - width;
+      }
+    
+      if (newTop < 0) {
+        e.delta[1] = -top;
+      } else if (newTop + height > parentBounds.height) {
+        e.delta[1] = parentBounds.height - top - height;
+      }
+    
+      updateMoveable(id, {
+        top: top + e.delta[1],
+        left: left + e.delta[0],
+        width,
+        height,
+        color,
+      });
+    };
 
     return (
       <>
@@ -224,27 +258,20 @@
         </div>
 
         <Moveable
-          target={isSelected && ref.current}
-          resizable
-          draggable
-          onDrag={(e) => {
-            updateMoveable(id, {
-              top: e.top,
-              left: e.left,
-              width,
-              height,
-              color,
-            });
-          }}
-          onResize={onResize}
-          onResizeEnd={onResizeEnd}
-          keepRatio={false}
-          throttleResize={1}
-          renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
-          edge={false}
-          zoom={1}
-          origin={false}
-          padding={{ left: 0, top: 0, right: 0, bottom: 0 }}
+           ref={moveableRef}
+           target={isSelected && ref.current}
+           resizable
+           draggable
+           onDrag={onDrag}
+           onResize={onResize}
+           onResizeEnd={onResizeEnd}
+           keepRatio={false}
+           throttleResize={1}
+           renderDirections={["nw", "n", "ne", "w", "e", "sw", "s", "se"]}
+           edge={false}
+           zoom={1}
+           origin={false}
+           padding={{ left: 0, top: 0, right: 0, bottom: 0 }}
         />
       </>
     );
