@@ -124,6 +124,8 @@
     });
     console.log(nodoReferencia)
 
+    const [image, setImage] = useState(imageUrl); // Estado para almacenar la URL de la imagen
+    console.log(setImage)
     useEffect(() => {
       if (isSelected) {
         setSelected(id);
@@ -225,6 +227,8 @@
       } else if (newTop + height > parentBounds.height) {
         e.delta[1] = parentBounds.height - top - height;
       }
+
+      
     
       updateMoveable(id, {
         top: top + e.delta[1],
@@ -232,6 +236,7 @@
         width,
         height,
         color,
+        imageUrl: image, // mantener la imagen original
       });
     };
 
@@ -248,7 +253,7 @@
             width: width,
             height: height,
             background: color,
-            backgroundImage: `url(${imageUrl})`,
+            backgroundImage: `url(${image})`, // cambiar por image
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
